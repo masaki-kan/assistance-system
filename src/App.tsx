@@ -10,7 +10,7 @@ function App() {
   return (
     <ChakraProvider>
       {/* <Provider store={store}> */}
-      <BrowserRouter>
+      <BrowserRouter basename="/assistance-system">
         <CommonLayout />
       </BrowserRouter>
       {/* </Provider> */}
