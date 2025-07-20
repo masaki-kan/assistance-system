@@ -376,8 +376,8 @@ const MedicalForm: React.FC = () => {
       .join("\n\n");
 
     const middleSecondText = contentMiddleSecond.items
-      .map((item) =>
-        item.list
+      .map((item) => {
+        const sectionText = item.list
           .map((subItem) => {
             const contentText = subItem.content
               .map((content) => {
@@ -385,10 +385,7 @@ const MedicalForm: React.FC = () => {
                 const hasCheck =
                   content.check !== undefined && content.check !== 0;
 
-                // 日付の場合：valueが空なら出さない
                 if (content.text === "日付" && !hasValue) return "";
-
-                // その他の項目：valueもcheckもないなら出さない
                 if (content.text !== "日付" && !hasValue && !hasCheck)
                   return "";
 
@@ -420,8 +417,13 @@ const MedicalForm: React.FC = () => {
               .join("\n  ")}`;
           })
           .filter(Boolean)
-          .join("\n\n")
-      )
+          .join("\n\n");
+
+        // 全体が空ならセクションごと省略
+        if (!sectionText) return "";
+
+        return `【${item.title}】\n${sectionText}`;
+      })
       .filter(Boolean)
       .join("\n\n");
 
@@ -789,7 +791,6 @@ const MedicalForm: React.FC = () => {
                               value={section.hospitalName}
                               onChange={(e) => {
                                 const e_value = e.target.value;
-                                console.log(e_value);
                                 setContentMiddleSecond((prev) => {
                                   const updated = { ...prev };
                                   updated.items = [...prev.items];
