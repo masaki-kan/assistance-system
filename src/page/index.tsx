@@ -410,11 +410,13 @@ const MedicalForm: React.FC = () => {
 
             const textMessage = subItem.text ? `メモ: ${subItem.text}` : "";
 
-            if (!hospital && !contentText && !textMessage) return "";
+            const parts = [hospital, contentText, textMessage].filter(
+              (p) => p && p.trim() !== ""
+            );
 
-            return `${subItem.name}\n  ${[hospital, contentText, textMessage]
-              .filter(Boolean)
-              .join("\n  ")}`;
+            if (parts.length === 0) return "";
+
+            return `${subItem.name}\n  ${parts.join("\n  ")}`;
           })
           .filter(Boolean)
           .join("\n\n");
@@ -835,6 +837,40 @@ const MedicalForm: React.FC = () => {
                                     w={"200px"}
                                     borderWidth={2}
                                     _focus={{ borderColor: "orange.500" }}
+                                    onChange={(e) => {
+                                      const e_value = e.target.value;
+                                      setContentMiddleSecond((prev) => {
+                                        const updated = { ...prev };
+                                        updated.items = [...prev.items];
+                                        updated.items[itemIndex] = {
+                                          ...updated.items[itemIndex],
+                                          list: [
+                                            ...updated.items[itemIndex].list,
+                                          ],
+                                        };
+                                        updated.items[itemIndex].list[
+                                          sectionIndex
+                                        ] = {
+                                          ...updated.items[itemIndex].list[
+                                            sectionIndex
+                                          ],
+                                          content: [
+                                            ...updated.items[itemIndex].list[
+                                              sectionIndex
+                                            ].content,
+                                          ],
+                                        };
+                                        updated.items[itemIndex].list[
+                                          sectionIndex
+                                        ].content[contentIndex] = {
+                                          ...updated.items[itemIndex].list[
+                                            sectionIndex
+                                          ].content[contentIndex],
+                                          value: e_value,
+                                        };
+                                        return updated;
+                                      });
+                                    }}
                                   />
                                 )}
                                 {content.text === "処方" && (
