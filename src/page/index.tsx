@@ -64,6 +64,7 @@ interface ContentData {
 
 interface SectionData {
   name: string;
+  hospitalName: string;
   content: ContentData[];
   text: string;
 }
@@ -130,7 +131,6 @@ const MedicalForm: React.FC = () => {
       list: [
         { title: "日付", value: "" },
         { title: "GAF", value: "" },
-        { title: "同行者", value: "" },
       ],
     },
     {
@@ -175,6 +175,7 @@ const MedicalForm: React.FC = () => {
           list: [
             {
               name: "精神科",
+              hospitalName: "",
               content: [
                 { text: "日付", value: "" },
                 { text: "処方", value: "", check: 0 },
@@ -184,6 +185,17 @@ const MedicalForm: React.FC = () => {
             },
             {
               name: "内科",
+              hospitalName: "",
+              content: [
+                { text: "日付", value: "" },
+                { text: "処方", value: "", check: 0 },
+                { text: "変更", value: "", check: 0 },
+              ],
+              text: "",
+            },
+            {
+              name: "その他",
+              hospitalName: "",
               content: [
                 { text: "日付", value: "" },
                 { text: "処方", value: "", check: 0 },
@@ -199,6 +211,27 @@ const MedicalForm: React.FC = () => {
           list: [
             {
               name: "精神科",
+              hospitalName: "",
+              content: [
+                { text: "日付", value: "" },
+                { text: "処方", value: "", check: 0 },
+                { text: "変更", value: "", check: 0 },
+              ],
+              text: "",
+            },
+            {
+              name: "内科",
+              hospitalName: "",
+              content: [
+                { text: "日付", value: "" },
+                { text: "処方", value: "", check: 0 },
+                { text: "変更", value: "", check: 0 },
+              ],
+              text: "",
+            },
+            {
+              name: "その他",
+              hospitalName: "",
               content: [
                 { text: "日付", value: "" },
                 { text: "処方", value: "", check: 0 },
@@ -312,25 +345,34 @@ const MedicalForm: React.FC = () => {
     const topText = contentTop
       .map((section) =>
         section.list
-          .map(
-            (item) =>
-              `${item.title}: ${item.value}${item.title === "Sp02" ? "%" : ""}`
+          .map((item) =>
+            item.value
+              ? `${item.title}: ${item.value}${
+                  item.title === "Sp02" ? "%" : ""
+                }`
+              : ""
           )
+          .filter(Boolean)
           .join("\n")
       )
+      .filter(Boolean)
       .join("\n\n");
 
     const middleText = contentMiddle
       .map((section) =>
         section.items
           .map((item) => {
-            const otherText = item.textarea
-              ? `\n${item.other}: ${item.textarea}`
-              : "";
-            return `${item.title}: ${item.value}${otherText}`;
+            if (!item.value && !item.textarea) return "";
+            const otherText =
+              item.textarea && item.other
+                ? `\n${item.other}: ${item.textarea}`
+                : "";
+            return `${item.title}: ${item.value || ""}${otherText}`;
           })
+          .filter(Boolean)
           .join("\n")
       )
+      .filter(Boolean)
       .join("\n\n");
 
     const middleSecondText = contentMiddleSecond.items
@@ -338,43 +380,69 @@ const MedicalForm: React.FC = () => {
         item.list
           .map((subItem) => {
             const contentText = subItem.content
-              .map(
-                (content) =>
-                  `${content.text}: ${
-                    content.check
-                      ? content.check === 1
-                        ? "(あり)"
-                        : "(なし)"
+              .map((content) => {
+                const hasValue = !!content.value;
+                const hasCheck =
+                  content.check !== undefined && content.check !== 0;
+
+                // 日付の場合：valueが空なら出さない
+                if (content.text === "日付" && !hasValue) return "";
+
+                // その他の項目：valueもcheckもないなら出さない
+                if (content.text !== "日付" && !hasValue && !hasCheck)
+                  return "";
+
+                const valuePart = hasValue ? `${content.value}` : "";
+                const checkPart =
+                  content.check !== undefined
+                    ? content.check === 1
+                      ? "あり"
+                      : content.check === 0
+                      ? "なし"
                       : ""
-                  }${content.value || ""} `
-              )
+                    : "";
+
+                return `${content.text}: ${valuePart} ${checkPart}`.trim();
+              })
+              .filter(Boolean)
               .join("\n  ");
-            const textMessage = subItem.text;
-            return `${subItem.name}\n  ${contentText}\n  ${textMessage}`;
+
+            const hospital = subItem.hospitalName
+              ? `病院名: ${subItem.hospitalName}`
+              : "";
+
+            const textMessage = subItem.text ? `メモ: ${subItem.text}` : "";
+
+            if (!hospital && !contentText && !textMessage) return "";
+
+            return `${subItem.name}\n  ${[hospital, contentText, textMessage]
+              .filter(Boolean)
+              .join("\n  ")}`;
           })
+          .filter(Boolean)
           .join("\n\n")
       )
+      .filter(Boolean)
       .join("\n\n");
 
     const infoText = info
       .map((item) => {
         if (item.title === "生活状況" && item.list) {
           const listDetails = item.list
+            .filter((subItem) => subItem.value)
             .map((subItem) => `  - ${subItem.title}: ${subItem.value}`)
             .join("\n");
-          return `${item.title}:\n${listDetails}`;
+          return listDetails ? `${item.title}:\n${listDetails}` : "";
         } else {
-          return `${item.title}: ${item.value || ""}`;
+          return item.value ? `${item.title}: ${item.value}` : "";
         }
       })
+      .filter(Boolean)
       .join("\n");
 
-    const totalTextMessage = [
-      topText,
-      middleText,
-      middleSecondText,
-      infoText,
-    ].join("\n\n");
+    const totalTextMessage = [topText, middleText, middleSecondText, infoText]
+      .filter(Boolean)
+      .join("\n\n");
 
     setSumText(totalTextMessage);
   }, [contentMiddle, contentMiddleSecond.items, contentTop, info]);
@@ -505,7 +573,7 @@ const MedicalForm: React.FC = () => {
                         />
                       </Box>
                       <Box w="65%">
-                        {item.title === "同行者" && (
+                        {/* {item.title === "同行者" && (
                           <Select
                             placeholder="選択してください"
                             value={item.value}
@@ -522,7 +590,7 @@ const MedicalForm: React.FC = () => {
                               </option>
                             ))}
                           </Select>
-                        )}
+                        )} */}
                         {item.title === "日付" && (
                           <Input
                             type="date"
@@ -699,7 +767,10 @@ const MedicalForm: React.FC = () => {
                 <TagComp text={contentMiddleSecond.sectionTitle} size="lg" />
                 {contentMiddleSecond.items.map((item, itemIndex) => (
                   <Box key={itemIndex} mt={4}>
-                    <TagComp text={item.title} size="md" variant="outline" />
+                    <HStack>
+                      <TagComp text={item.title} size="md" variant="outline" />
+                    </HStack>
+
                     <VStack spacing={4} mt={4} align="stretch">
                       {item.list.map((section, sectionIndex) => (
                         <Box
@@ -709,7 +780,38 @@ const MedicalForm: React.FC = () => {
                           borderRadius="lg"
                           boxShadow="sm"
                         >
-                          <TagComp text={section.name} size="md" />
+                          <VStack align="flex-start" spacing={4}>
+                            <TagComp text={section.name} size="md" />
+                            <Input
+                              size="sm"
+                              w={"full"}
+                              placeholder="病院名など"
+                              value={section.hospitalName}
+                              onChange={(e) => {
+                                const e_value = e.target.value;
+                                console.log(e_value);
+                                setContentMiddleSecond((prev) => {
+                                  const updated = { ...prev };
+                                  updated.items = [...prev.items];
+                                  updated.items[itemIndex] = {
+                                    ...updated.items[itemIndex],
+                                    list: [...updated.items[itemIndex].list],
+                                  };
+                                  updated.items[itemIndex].list[sectionIndex] =
+                                    {
+                                      ...updated.items[itemIndex].list[
+                                        sectionIndex
+                                      ],
+                                      hospitalName: e_value,
+                                    };
+                                  return updated;
+                                });
+                              }}
+                              borderWidth={2}
+                              _focus={{ borderColor: "orange.500" }}
+                            />
+                          </VStack>
+
                           <VStack mt={3} spacing={3} align="stretch">
                             {section.content.map((content, contentIndex) => (
                               <HStack
